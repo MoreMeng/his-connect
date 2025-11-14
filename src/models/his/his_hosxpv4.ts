@@ -1857,7 +1857,7 @@ export class HisHosxpv4Model {
 
         sql = sql.whereNotNull('ipt.ward')
             .whereNot('ipt.ward', '')
-            .where("ward.ward_active", "Y");
+            .where('ward.ward_active', 'Y');
         return sql.groupBy(['ipt.ward', 'ward.name']).orderBy('ipt.ward');
     }
 
@@ -1875,7 +1875,7 @@ export class HisHosxpv4Model {
             .andWhere(function () {
                 this.whereNull('ipt.dchdate').orWhere('ipt.dchdate', '>=', formattedDate);
             });
-        return sql.where("ward.ward_active", "Y")
+        return sql.where('ward.ward_active', 'Y')
             .groupBy(['ipt.spclty', 'clinic.name'])
             .orderBy('ipt.spclty');
     }
