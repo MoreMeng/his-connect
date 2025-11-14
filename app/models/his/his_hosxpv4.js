@@ -92,22 +92,26 @@ class HisHosxpv4Model {
         return [];
     }
     async getPerson(db, columnName, searchText, hospCode = hisHospcode) {
-        columnName = columnName == 'hn' ? 'p.hn' : columnName;
-        columnName = columnName == 'cid' ? 'p.cid' : columnName;
-        columnName = columnName == 'name' ? 'p.fname' : columnName;
-        columnName = columnName == 'hid' ? 'h.house_id' : columnName;
+        const mappedColumn = columnName == 'hn' ? 'p.hn' :
+            columnName == 'cid' ? 'p.cid' :
+            columnName == 'name' ? 'p.fname' :
+            columnName == 'hid' ? 'h.house_id' :
+            columnName;
+        const normalizedSearchText = columnName == 'hn' && typeof searchText !== 'string'
+            ? String(searchText)
+            : searchText;
         const vstatusSubquery = db('person_village_duty as pvd')
-            .select(db.raw(`CASE 
+            .select(db.raw(`CASE
                 WHEN pvd.person_duty_id IN ('1','2','4','5') THEN '1'
                 WHEN pvd.person_duty_id IN ('6') THEN '2'
                 WHEN pvd.person_duty_id IN ('3') THEN '3'
                 WHEN pvd.person_duty_id IN ('10') THEN '4'
                 WHEN pvd.person_duty_id IN ('7','8','9') THEN '5'
-                ELSE '5' 
+                ELSE '5'
             END`))
             .whereRaw('pvd.person_id = p.cid')
             .limit(1);
-        const result = await db('patient as p')
+        const query = db('patient as p')
             .leftJoin('person', 'p.hn', 'person.patient_hn')
             .leftJoin('house as h', 'person.house_id', 'h.house_id')
             .leftJoin('occupation as o', 'o.occupation', 'p.occupation')
@@ -116,14 +120,20 @@ class HisHosxpv4Model {
             .leftJoin('provis_religion as r', 'r.code', 'p.religion')
             .leftJoin('education as e', 'e.education', 'p.educate')
             .leftJoin('person_labor_type as pl', 'person.person_labor_type_id', 'pl.person_labor_type_id')
-            .select(db.raw('? as HOSPCODE', [hisHospcode]), db.raw('h.house_id as HID'), db.raw('p.cid as CID'), db.raw('p.pname as PRENAME'), db.raw('p.fname as NAME'), db.raw('p.lname as LNAME'), db.raw('p.hn as HN'), db.raw('p.hn as PID'), db.raw('p.sex as SEX'), db.raw('p.birthday as BIRTH'), db.raw("CASE WHEN p.marrystatus IN (1,2,3,4,5,6) THEN p.marrystatus ELSE '9' END as MSTATUS"), db.raw("CASE WHEN person.person_house_position_id = 1 THEN '1' ELSE '2' END as FSTATUS"), db.raw("CASE WHEN o.occupation IS NULL THEN '000' ELSE o.occupation END AS OCCUPATION_OLD"), db.raw("CASE WHEN o.nhso_code IS NULL THEN '9999' ELSE o.nhso_code END AS OCCUPATION_NEW"), db.raw("CASE WHEN nt0.nhso_code IS NULL THEN '099' ELSE nt0.nhso_code END AS RACE"), db.raw("CASE WHEN nt1.nhso_code IS NULL THEN '099' ELSE nt1.nhso_code END AS NATION"), db.raw("CASE WHEN p.religion IS NULL THEN '01' ELSE p.religion END AS RELIGION"), db.raw("CASE WHEN e.provis_code IS NULL THEN '9' ELSE e.provis_code END as EDUCATION"), db.raw('p.father_cid as FATHER'), db.raw('p.mother_cid as MOTHER'), db.raw('p.couple_cid as COUPLE'), db.raw(`(${vstatusSubquery.toString()}) as VSTATUS`), db.raw('person.movein_date as MOVEIN'), db.raw("CASE WHEN person.person_discharge_id IS NULL THEN '9' ELSE person.person_discharge_id END AS DISCHARGE"), db.raw('person.discharge_date as DDISCHARGE'), db.raw(`CASE 
+            .select(db.raw('? as HOSPCODE', [hisHospcode]), db.raw('h.house_id as HID'), db.raw('p.cid as CID'), db.raw('p.pname as PRENAME'), db.raw('p.fname as NAME'), db.raw('p.lname as LNAME'), db.raw('p.hn as HN'), db.raw('p.hn as PID'), db.raw('p.sex as SEX'), db.raw('p.birthday as BIRTH'), db.raw("CASE WHEN p.marrystatus IN (1,2,3,4,5,6) THEN p.marrystatus ELSE '9' END as MSTATUS"), db.raw("CASE WHEN person.person_house_position_id = 1 THEN '1' ELSE '2' END as FSTATUS"), db.raw("CASE WHEN o.occupation IS NULL THEN '000' ELSE o.occupation END AS OCCUPATION_OLD"), db.raw("CASE WHEN o.nhso_code IS NULL THEN '9999' ELSE o.nhso_code END AS OCCUPATION_NEW"), db.raw("CASE WHEN nt0.nhso_code IS NULL THEN '099' ELSE nt0.nhso_code END AS RACE"), db.raw("CASE WHEN nt1.nhso_code IS NULL THEN '099' ELSE nt1.nhso_code END AS NATION"), db.raw("CASE WHEN p.religion IS NULL THEN '01' ELSE p.religion END AS RELIGION"), db.raw("CASE WHEN e.provis_code IS NULL THEN '9' ELSE e.provis_code END as EDUCATION"), db.raw('p.father_cid as FATHER'), db.raw('p.mother_cid as MOTHER'), db.raw('p.couple_cid as COUPLE'), db.raw(`(${vstatusSubquery.toString()}) as VSTATUS`), db.raw('person.movein_date as MOVEIN'), db.raw("CASE WHEN person.person_discharge_id IS NULL THEN '9' ELSE person.person_discharge_id END AS DISCHARGE"), db.raw('person.discharge_date as DDISCHARGE'), db.raw(`CASE
                     WHEN person.blood_grp_id = 1 THEN '1'
                     WHEN person.blood_grp_id = 2 THEN '2'
                     WHEN person.blood_grp_id = 3 THEN '3'
                     WHEN person.blood_grp_id = 4 THEN '4'
-                    ELSE '9' 
+                    ELSE '9'
                 END as ABOGROUP`), db.raw('person.blood_grp_rh as RHGROUP'), db.raw('pl.nhso_code as LABOR'), db.raw('p.passport_no as PASSPORT'), db.raw('p.type_area as TYPEAREA'), db.raw('p.mobile_phone_number as MOBILE'), db.raw('p.deathday as dead'), db.raw('CASE WHEN p.last_update IS NULL THEN p.last_update ELSE p.last_visit END as D_UPDATE'))
-            .where(columnName, searchText);
+        if (columnName === 'hn') {
+            query.whereRaw('p.hn::text = ?::text', [searchText]);
+        }
+        else {
+            query.where(mappedColumn, normalizedSearchText);
+        }
+        const result = await query;
         return result[0];
     }
     async getAddress(db, columnName, searchText, hospCode = hisHospcode) {
@@ -144,35 +154,35 @@ class HisHosxpv4Model {
         columnName = columnName === 'hn' ? 'o.hn' : columnName;
         columnName = columnName === 'date_serv' ? 'o.vstdate' : columnName;
         const result = await db('ovst as o')
-            .select(db.raw('? as HOSPCODE', [hisHospcode]), db.raw('pt.hn as PID'), db.raw('o.hn as HN'), db.raw('pt.CID'), db.raw('os.seq_id'), db.raw('os.vn as SEQ'), db.raw(`CASE 
-                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d') 
-                END as DATE_SERV`), db.raw(`CASE 
-                    WHEN o.vsttime IS NULL OR TRIM(o.vsttime) = '' OR o.vsttime LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE TIME_FORMAT(o.vsttime, '%H%i%s') 
-                END as TIME_SERV`), db.raw(`CASE WHEN v.village_moo <> '0' THEN '1' ELSE '2' END as LOCATION`), db.raw(`CASE o.visit_type 
-                    WHEN 'i' THEN '1' 
-                    WHEN 'o' THEN '2' 
-                    ELSE '1' 
-                END as INTIME`), db.raw(`CASE WHEN p2.pttype_std_code IS NULL OR p2.pttype_std_code = '' THEN '9100' ELSE p2.pttype_std_code END as INSTYPE`), db.raw('o.hospmain as MAIN'), db.raw(`CASE o.pt_subtype 
-                    WHEN '7' THEN '2' 
-                    WHEN '9' THEN '3' 
-                    WHEN '10' THEN '4' 
-                    ELSE '1' 
-                END as TYPEIN`), db.raw('CASE WHEN o.rfrolct IS NULL THEN i.rfrolct ELSE o.rfrolct END as REFEROUTHOSP'), db.raw('CASE WHEN o.rfrocs IS NULL THEN i.rfrocs ELSE o.rfrocs END as CAUSEOUT'), db.raw('s.waist'), db.raw('s.cc'), db.raw('s.pe'), db.raw('s.pmh as ph'), db.raw('s.hpi as pi'), db.raw(`CONCAT('CC:', s.cc, ' HPI:', s.hpi, ' PMH:', s.pmh) as nurse_note`), db.raw(`CASE WHEN o.pt_subtype IN ('0', '1') THEN '1' ELSE '2' END as SERVPLACE`), db.raw(`CASE WHEN s.temperature IS NOT NULL THEN REPLACE(FORMAT(s.temperature, 1), ',', '') ELSE FORMAT(0, 1) END as BTEMP`), db.raw('FORMAT(s.bps, 0) as SBP'), db.raw('FORMAT(s.bpd, 0) as DBP'), db.raw('FORMAT(s.pulse, 0) as PR'), db.raw('FORMAT(s.rr, 0) as RR'), db.raw('s.o2sat'), db.raw('s.bw as weight'), db.raw('s.height'), db.raw(`'er.gcs_e'`), db.raw(`'er.gcs_v'`), db.raw(`'er.gcs_m'`), db.raw(`'er.pupil_l as pupil_left'`), db.raw(`'er.pupil_r as pupil_right'`), db.raw(`CASE 
-                    WHEN (o.ovstost >= '01' AND o.ovstost <= '14') THEN '2' 
-                    WHEN o.ovstost IN ('98', '99', '61', '62', '63', '00') THEN '1' 
-                    WHEN o.ovstost = '54' THEN '3' 
-                    WHEN o.ovstost = '52' THEN '4' 
-                    ELSE '7' 
-                END as TYPEOUT`), db.raw('o.doctor as dr'), db.raw('doctor.licenseno as provider'), db.raw(`CASE WHEN vn.inc01 + vn.inc12 IS NOT NULL THEN REPLACE(FORMAT(vn.inc01 + vn.inc12, 2), ',', '') ELSE FORMAT(0, 2) END as COST`), db.raw(`CASE WHEN vn.item_money IS NOT NULL THEN REPLACE(FORMAT(vn.item_money, 2), ',', '') ELSE FORMAT(0, 2) END as PRICE`), db.raw(`CASE WHEN vn.paid_money IS NOT NULL THEN REPLACE(FORMAT(vn.paid_money, 2), ',', '') ELSE FORMAT(0, 2) END as PAYPRICE`), db.raw(`CASE WHEN vn.rcpt_money IS NOT NULL THEN REPLACE(FORMAT(vn.rcpt_money, 2), ',', '') ELSE FORMAT(0, 2) END as ACTUALPAY`), db.raw(`CASE 
-                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL 
-                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = '' 
-                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s') 
+            .select(db.raw('? as HOSPCODE', [hisHospcode]), db.raw('pt.hn as PID'), db.raw('o.hn as HN'), db.raw('pt.CID'), db.raw('os.seq_id'), db.raw('os.vn as SEQ'), db.raw(`CASE
+                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d')
+                END as DATE_SERV`), db.raw(`CASE
+                    WHEN o.vsttime IS NULL OR TRIM(o.vsttime) = '' OR o.vsttime LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE TIME_FORMAT(o.vsttime, '%H%i%s')
+                END as TIME_SERV`), db.raw(`CASE WHEN v.village_moo <> '0' THEN '1' ELSE '2' END as LOCATION`), db.raw(`CASE o.visit_type
+                    WHEN 'i' THEN '1'
+                    WHEN 'o' THEN '2'
+                    ELSE '1'
+                END as INTIME`), db.raw(`CASE WHEN p2.pttype_std_code IS NULL OR p2.pttype_std_code = '' THEN '9100' ELSE p2.pttype_std_code END as INSTYPE`), db.raw('o.hospmain as MAIN'), db.raw(`CASE o.pt_subtype
+                    WHEN '7' THEN '2'
+                    WHEN '9' THEN '3'
+                    WHEN '10' THEN '4'
+                    ELSE '1'
+                END as TYPEIN`), db.raw('CASE WHEN o.rfrolct IS NULL THEN i.rfrolct ELSE o.rfrolct END as REFEROUTHOSP'), db.raw('CASE WHEN o.rfrocs IS NULL THEN i.rfrocs ELSE o.rfrocs END as CAUSEOUT'), db.raw('s.waist'), db.raw('s.cc'), db.raw('s.pe'), db.raw('s.pmh as ph'), db.raw('s.hpi as pi'), db.raw(`CONCAT('CC:', s.cc, ' HPI:', s.hpi, ' PMH:', s.pmh) as nurse_note`), db.raw(`CASE WHEN o.pt_subtype IN ('0', '1') THEN '1' ELSE '2' END as SERVPLACE`), db.raw(`CASE WHEN s.temperature IS NOT NULL THEN REPLACE(FORMAT(s.temperature, 1), ',', '') ELSE FORMAT(0, 1) END as BTEMP`), db.raw('FORMAT(s.bps, 0) as SBP'), db.raw('FORMAT(s.bpd, 0) as DBP'), db.raw('FORMAT(s.pulse, 0) as PR'), db.raw('FORMAT(s.rr, 0) as RR'), db.raw('s.o2sat'), db.raw('s.bw as weight'), db.raw('s.height'), db.raw(`'er.gcs_e'`), db.raw(`'er.gcs_v'`), db.raw(`'er.gcs_m'`), db.raw(`'er.pupil_l as pupil_left'`), db.raw(`'er.pupil_r as pupil_right'`), db.raw(`CASE
+                    WHEN (o.ovstost >= '01' AND o.ovstost <= '14') THEN '2'
+                    WHEN o.ovstost IN ('98', '99', '61', '62', '63', '00') THEN '1'
+                    WHEN o.ovstost = '54' THEN '3'
+                    WHEN o.ovstost = '52' THEN '4'
+                    ELSE '7'
+                END as TYPEOUT`), db.raw('o.doctor as dr'), db.raw('doctor.licenseno as provider'), db.raw(`CASE WHEN vn.inc01 + vn.inc12 IS NOT NULL THEN REPLACE(FORMAT(vn.inc01 + vn.inc12, 2), ',', '') ELSE FORMAT(0, 2) END as COST`), db.raw(`CASE WHEN vn.item_money IS NOT NULL THEN REPLACE(FORMAT(vn.item_money, 2), ',', '') ELSE FORMAT(0, 2) END as PRICE`), db.raw(`CASE WHEN vn.paid_money IS NOT NULL THEN REPLACE(FORMAT(vn.paid_money, 2), ',', '') ELSE FORMAT(0, 2) END as PAYPRICE`), db.raw(`CASE WHEN vn.rcpt_money IS NOT NULL THEN REPLACE(FORMAT(vn.rcpt_money, 2), ',', '') ELSE FORMAT(0, 2) END as ACTUALPAY`), db.raw(`CASE
+                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL
+                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = ''
+                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s')
                 END as D_UPDATE`), db.raw('vn.hospsub as hsub'))
             .leftJoin('person as p', 'o.hn', 'p.patient_hn')
             .leftJoin('vn_stat as vn', function () {
@@ -277,20 +287,20 @@ class HisHosxpv4Model {
     }
     async getProcedureOpd(db, visitNo, hospCode = hisHospcode) {
         const query1 = db('health_med_service as h1')
-            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE 
-                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d') 
-                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw('h3.icd10tm as procedcode'), db.raw(`CASE 
-                    WHEN h2.service_price IS NOT NULL AND TRIM(h2.service_price) <> '' 
-                    THEN REPLACE(FORMAT(h2.service_price, 2), ',', '') 
-                    ELSE FORMAT(0, 2) 
-                END as serviceprice`), db.raw('h1.health_med_doctor_id as provider'), db.raw(`CASE 
-                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL 
-                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = '' 
-                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s') 
+            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE
+                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d')
+                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw('h3.icd10tm as procedcode'), db.raw(`CASE
+                    WHEN h2.service_price IS NOT NULL AND TRIM(h2.service_price) <> ''
+                    THEN REPLACE(FORMAT(h2.service_price, 2), ',', '')
+                    ELSE FORMAT(0, 2)
+                END as serviceprice`), db.raw('h1.health_med_doctor_id as provider'), db.raw(`CASE
+                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL
+                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = ''
+                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s')
                 END as d_update`))
             .leftJoin('health_med_service_operation as h2', 'h2.health_med_service_id', 'h1.health_med_service_id')
             .leftJoin('health_med_operation_item as h3', 'h3.health_med_operation_item_id', 'h2.health_med_operation_item_id')
@@ -314,24 +324,24 @@ class HisHosxpv4Model {
             .where('os.vn', visitNo);
         const query2 = db('er_regist_oper as r')
             .distinct()
-            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE 
-                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d') 
-                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw(`CASE 
-                    WHEN e.icd10tm IS NULL OR e.icd10tm = '' 
-                    THEN e.icd9cm 
-                    ELSE e.icd10tm 
-                END as procedcode`), db.raw(`CASE 
-                    WHEN e.price IS NOT NULL AND TRIM(e.price) <> '' 
-                    THEN REPLACE(FORMAT(e.price, 2), ',', '') 
-                    ELSE FORMAT(0, 2) 
-                END as serviceprice`), db.raw('r.doctor as provider'), db.raw(`CASE 
-                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL 
-                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = '' 
-                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s') 
+            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE
+                    WHEN o.vstdate IS NULL OR TRIM(o.vstdate) = '' OR o.vstdate LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(o.vstdate, '%Y-%m-%d')
+                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw(`CASE
+                    WHEN e.icd10tm IS NULL OR e.icd10tm = ''
+                    THEN e.icd9cm
+                    ELSE e.icd10tm
+                END as procedcode`), db.raw(`CASE
+                    WHEN e.price IS NOT NULL AND TRIM(e.price) <> ''
+                    THEN REPLACE(FORMAT(e.price, 2), ',', '')
+                    ELSE FORMAT(0, 2)
+                END as serviceprice`), db.raw('r.doctor as provider'), db.raw(`CASE
+                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL
+                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = ''
+                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s')
                 END as d_update`))
             .leftJoin('er_oper_code as e', 'e.er_oper_code', 'r.er_oper_code')
             .leftJoin('vn_stat as v', 'v.vn', 'r.vn')
@@ -346,24 +356,24 @@ class HisHosxpv4Model {
             .where('os.vn', visitNo);
         const query3 = db('dtmain as r')
             .distinct()
-            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE 
-                    WHEN r.vstdate IS NULL OR TRIM(r.vstdate) = '' OR r.vstdate LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(r.vstdate, '%Y-%m-%d') 
-                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw(`CASE 
-                    WHEN e.icd10tm_operation_code IS NULL OR e.icd10tm_operation_code = '' 
-                    THEN e.icd9cm 
-                    ELSE e.icd10tm_operation_code 
-                END as procedcode`), db.raw(`CASE 
-                    WHEN r.fee IS NOT NULL AND TRIM(r.fee) <> '' 
-                    THEN REPLACE(FORMAT(r.fee, 2), ',', '') 
-                    ELSE FORMAT(0, 2) 
-                END as serviceprice`), db.raw('r.doctor as provider'), db.raw(`CASE 
-                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL 
-                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = '' 
-                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s') 
+            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE
+                    WHEN r.vstdate IS NULL OR TRIM(r.vstdate) = '' OR r.vstdate LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(r.vstdate, '%Y-%m-%d')
+                END as date_serv`), db.raw('sp.provis_code as clinic'), db.raw(`CASE
+                    WHEN e.icd10tm_operation_code IS NULL OR e.icd10tm_operation_code = ''
+                    THEN e.icd9cm
+                    ELSE e.icd10tm_operation_code
+                END as procedcode`), db.raw(`CASE
+                    WHEN r.fee IS NOT NULL AND TRIM(r.fee) <> ''
+                    THEN REPLACE(FORMAT(r.fee, 2), ',', '')
+                    ELSE FORMAT(0, 2)
+                END as serviceprice`), db.raw('r.doctor as provider'), db.raw(`CASE
+                    WHEN CONCAT(o.vstdate, ' ', o.vsttime) IS NULL
+                        OR TRIM(CONCAT(o.vstdate, ' ', o.vsttime)) = ''
+                        OR CONCAT(o.vstdate, ' ', o.vsttime) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(o.vstdate, ' ', o.vsttime), '%Y-%m-%d %H:%i:%s')
                 END as d_update`))
             .leftJoin('person as p', 'p.patient_hn', 'r.hn')
             .leftJoin('dttm as e', 'e.icd9cm', 'r.icd9')
@@ -393,30 +403,30 @@ class HisHosxpv4Model {
     }
     async getChargeOpd(db, visitNo, hospCode = hisHospcode) {
         const result = await db('opitemrece as o')
-            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE 
-                    WHEN CONCAT(ovst.vstdate) IS NULL 
-                        OR TRIM(CONCAT(ovst.vstdate)) = '' 
-                        OR CONCAT(ovst.vstdate) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(ovst.vstdate), '%Y-%m-%d') 
-                END as date_serv`), db.raw(`CASE 
-                    WHEN sp.provis_code IS NULL OR sp.provis_code = '' 
-                    THEN '00100' 
-                    ELSE sp.provis_code 
-                END as clinic`), db.raw('o.income as chargeitem'), db.raw(`CASE 
-                    WHEN d.charge_list_id IS NULL OR d.charge_list_id = '' 
-                    THEN '0000000' 
-                    ELSE RIGHT(CONCAT('00000000', d.charge_list_id), 6) 
-                END as chargelist`), db.raw('o.qty as quantity'), db.raw(`CASE 
-                    WHEN p2.pttype_std_code IS NULL OR p2.pttype_std_code = '' 
-                    THEN '9100' 
-                    ELSE p2.pttype_std_code 
-                END as instype`), db.raw('FORMAT(o.cost, 2) as cost'), db.raw('FORMAT(o.sum_price, 2) as price'), db.raw(`'0.00' as payprice`), db.raw(`CASE 
-                    WHEN CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time) IS NULL 
-                        OR TRIM(CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time)) = '' 
-                        OR CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time) LIKE '0000-00-00%' 
-                    THEN '' 
-                    ELSE DATE_FORMAT(CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time), '%Y-%m-%d %H:%i:%s') 
+            .select(db.raw('? as hospcode', [hisHospcode]), db.raw('pt.hn as pid'), db.raw('os.seq_id'), db.raw('os.vn as seq'), db.raw('os.vn'), db.raw(`CASE
+                    WHEN CONCAT(ovst.vstdate) IS NULL
+                        OR TRIM(CONCAT(ovst.vstdate)) = ''
+                        OR CONCAT(ovst.vstdate) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(ovst.vstdate), '%Y-%m-%d')
+                END as date_serv`), db.raw(`CASE
+                    WHEN sp.provis_code IS NULL OR sp.provis_code = ''
+                    THEN '00100'
+                    ELSE sp.provis_code
+                END as clinic`), db.raw('o.income as chargeitem'), db.raw(`CASE
+                    WHEN d.charge_list_id IS NULL OR d.charge_list_id = ''
+                    THEN '0000000'
+                    ELSE RIGHT(CONCAT('00000000', d.charge_list_id), 6)
+                END as chargelist`), db.raw('o.qty as quantity'), db.raw(`CASE
+                    WHEN p2.pttype_std_code IS NULL OR p2.pttype_std_code = ''
+                    THEN '9100'
+                    ELSE p2.pttype_std_code
+                END as instype`), db.raw('FORMAT(o.cost, 2) as cost'), db.raw('FORMAT(o.sum_price, 2) as price'), db.raw(`'0.00' as payprice`), db.raw(`CASE
+                    WHEN CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time) IS NULL
+                        OR TRIM(CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time)) = ''
+                        OR CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time) LIKE '0000-00-00%'
+                    THEN ''
+                    ELSE DATE_FORMAT(CONCAT(ovst.vstdate, ' ', ovst.cur_dep_time), '%Y-%m-%d %H:%i:%s')
                 END as d_update`))
             .leftJoin('ovst', 'o.vn', 'ovst.vn')
             .leftJoin('person as p', 'o.hn', 'p.patient_hn')
@@ -468,8 +478,8 @@ class HisHosxpv4Model {
                 pt.hn as PID, pt.cid as CID,
                 os.seq_id, os.vn as SEQ, os.vn,
                 if(
-                    opi.vstdate  is null 
-                        or trim(opi.vstdate)='' 
+                    opi.vstdate  is null
+                        or trim(opi.vstdate)=''
                         or opi.vstdate  like '0000-00-00%',
                     '',
                     date_format(opi.vstdate ,'%Y-%m-%d')
@@ -483,30 +493,30 @@ class HisHosxpv4Model {
 				concat(d.usage_code, ' ' , d.frequency_code, ' ', d.usage_unit_code, ' ', d.time_code) as usage_code,
 				concat(drugusage.name1, ' ', drugusage.name2 , ' ' , drugusage.name3) as drug_usage,
 				d.therapeutic as caution,
-                format(opi.unitprice,2) as drugprice, 
-                format(d.unitcost,2)  as drugcost, 
+                format(opi.unitprice,2) as drugprice,
+                format(d.unitcost,2)  as drugcost,
                 opi.doctor as provider,
                 if(
-                    opi.last_modified  is null 
-                        or trim(opi.last_modified)='' 
+                    opi.last_modified  is null
+                        or trim(opi.last_modified)=''
                         or opi.last_modified  like '0000-00-00%',
                     date_format(concat(opi.rxdate,' ',opi.rxtime),'%Y-%m-%d %H:%i:%s'),
                     date_format(opi.last_modified,'%Y-%m-%d %H:%i:%s')
                 ) as d_update
-                
+
             FROM
-                opitemrece opi 
+                opitemrece opi
                 left join ovst o on o.vn=opi.vn  and o.hn=opi.hn
                 inner join drugitems d on opi.icode=d.icode
                 left join drugusage on d.drugusage=drugusage.drugusage
                 left join spclty sp on o.spclty=sp.spclty
-                left join person p on opi.hn=p.patient_hn 
+                left join person p on opi.hn=p.patient_hn
                 left join patient pt on pt.hn = o.hn
-                left join ovst_seq os on os.vn = o.vn 
-                
-            WHERE 
-                (opi.an is null or opi.an ='') 
-                and opi.vn not in (select i.vn from ipt as i where i.vn=opi.vn) 
+                left join ovst_seq os on os.vn = o.vn
+
+            WHERE
+                (opi.an is null or opi.an ='')
+                and opi.vn not in (select i.vn from ipt as i where i.vn=opi.vn)
                 and opi.icode like '1%'
                 and os.vn=?
         `;
@@ -579,10 +589,10 @@ class HisHosxpv4Model {
                 CASE WHEN dt.nhso_dchtype IS NULL THEN '' ELSE dt.nhso_dchtype END AS dischtype,
                 IF(i.dchtype = '04',i.rfrolct,'') AS referouthosp,
                 IF (
-                    i.dchtype = 04,            
+                    i.dchtype = 04,
                     IF (
                         i.rfrocs = 7,
-                        '5',            
+                        '5',
                         IF (
                             i.rfrocs IS NOT NULL,
                             '1',
@@ -651,12 +661,12 @@ class HisHosxpv4Model {
                 date_format(concat(i.dchdate, ' ', i.dchtime),'%Y-%m-%d %H:%i:%s') as datetime_disch,
                 s.provis_code as warddisch, ward.name as WARDDISCHNAME,
                 ds.nhso_dchstts as dischstatus,
-                dt.nhso_dchtype as dischtype,            
+                dt.nhso_dchtype as dischtype,
                 IF (i.dchtype = 04, i.rfrolct,'') referouthosp,
-                IF (i.dchtype = 04,            
+                IF (i.dchtype = 04,
                     IF (
                         i.rfrocs = 7,
-                        '5',            
+                        '5',
                         IF (
                             i.rfrocs IS NOT NULL,
                             '1',
@@ -678,12 +688,12 @@ class HisHosxpv4Model {
                     2
                 ) payprice,
                 ROUND(
-                    IFNULL(		
+                    IFNULL(
                         a.paid_money,
                         0
                     ),
                     2
-                ) actualpay,	
+                ) actualpay,
                 a.dx_doctor provider,
                 ifnull(
                     date_format(
@@ -694,16 +704,16 @@ class HisHosxpv4Model {
                 ) d_update,
                 ifnull(
                     i.drg,
-                    0                
+                    0
                 ) drg,
                 ifnull(
                     a.rw,
                     0
-                ) rw,                
+                ) rw,
                 ifnull(
                     i.adjrw,
                     0
-                ) adjrw,               
+                ) adjrw,
                 ifnull(i.grouper_err, 1) error,
                 ifnull(i.grouper_warn, 64) warning,
                 ifnull(i.grouper_actlos, 0) actlos,
@@ -723,8 +733,8 @@ class HisHosxpv4Model {
                 LEFT JOIN provis_instype ps ON ps. CODE = p1.nhso_code
                 LEFT JOIN dchtype dt ON i.dchtype = dt.dchtype
                 LEFT JOIN dchstts ds ON i.dchstts = ds.dchstts
-                LEFT JOIN opitemrece c ON c.an = i.an  
-                LEFT JOIN ward ON i.ward = ward.ward           
+                LEFT JOIN opitemrece c ON c.an = i.an
+                LEFT JOIN ward ON i.ward = ward.ward
             WHERE ${columnName}=? ${validRefer}
             GROUP BY i.an `;
         const result = await db.raw(sql, [hisHospcode, searchValue]);
@@ -734,27 +744,27 @@ class HisHosxpv4Model {
         columnName = columnName === 'visitNo' ? 'q.vn' : columnName;
         columnName = columnName === 'an' ? 'ipt.an' : columnName;
         const sql = `
-            select 
+            select
                 ? as hospcode,
                 pt.hn as pid,
                 ipt.an as an,
                 ifnull(date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s'),'') as datetime_admit,
                 concat('0',right(spclty.provis_code,4)) as warddiag,
                 iptdiag.diagtype as diagtype,
-                iptdiag.icd10 as diagcode, 
+                iptdiag.icd10 as diagcode,
                 icd.name AS diagname,
                 iptdiag.doctor as provider,
                 ifnull(date_format(iptdiag.modify_datetime,'%Y-%m-%d %H:%i:%s'),date_format(NOW(),'%Y-%m-%d %H:%i:%s')) d_update,
                 pt.cid as CID
-                
-            from 
+
+            from
                 iptdiag
                 left join ipt on ipt.an=iptdiag.an
                 left join ovst_seq q ON q.vn = ipt.vn
                 left join patient pt on pt.hn = ipt.hn
                 left join person p on p.patient_hn = ipt.hn
                 LEFT JOIN icd10_sss as icd ON iptdiag.icd10 = icd.code
-                left outer join spclty on spclty.spclty=ipt.spclty              
+                left outer join spclty on spclty.spclty=ipt.spclty
             where ${columnName} = ?
             order by ipt.an, iptdiag.diagtype`;
         const result = await db.raw(sql, [hisHospcode, searchNo]);
@@ -818,13 +828,13 @@ class HisHosxpv4Model {
                 left join ipt_oper_code ipc on ipc.ipt_oper_code = i.ipt_oper_code
             where ipt.an = ?`;
         const sql1 = `
-            select 
+            select
                 ? as hospcode,
                 pt.hn as pid,
                 ipt.an,
                 if(
-                    concat(ipt.regdate,' ',ipt.regtime) is null 
-                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = '' 
+                    concat(ipt.regdate,' ',ipt.regtime) is null
+                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = ''
                         or concat(ipt.regdate,' ',ipt.regtime) like '0000-00-00%',
                     '',
                     date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s')
@@ -832,40 +842,40 @@ class HisHosxpv4Model {
                 concat('0',right(spclty.provis_code,4)) as wardstay,
                 ipc.icd9cm as procedcode,
                 if(
-                    i.begin_date_time is null 
-                        or trim(i.begin_date_time) = '' 
+                    i.begin_date_time is null
+                        or trim(i.begin_date_time) = ''
                         or i.begin_date_time like '0000-00-00%',
                     '',date_format(i.begin_date_time ,'%Y-%m-%d %H:%i:%s')
                 ) as timestart,
                 if(
-                    i.end_date_time is null 
-                        or trim(i.end_date_time) = '' 
+                    i.end_date_time is null
+                        or trim(i.end_date_time) = ''
                         or i.end_date_time like '0000-00-00%',
                     '',date_format(i.end_date_time ,'%Y-%m-%d %H:%i:%s')
                 ) as timefinish,
                 if(ipc.price , replace(format(ipc.price,2),',',''), format(0,2)) as serviceprice,
                 i.doctor as provider,
                 if(
-                    ipt.dchdate is not null 
+                    ipt.dchdate is not null
                         or ipt.dchdate <> '',
-                        if(concat(ipt.dchdate,' ',ipt.dchtime) is null 
-                            or trim(concat(ipt.dchdate,' ',ipt.dchtime)) = '' 
+                        if(concat(ipt.dchdate,' ',ipt.dchtime) is null
+                            or trim(concat(ipt.dchdate,' ',ipt.dchtime)) = ''
                             or concat(ipt.dchdate,' ',ipt.dchtime) like '0000-00-00%',
                         '',date_format(concat(ipt.dchdate,' ',ipt.dchtime),'%Y-%m-%d %H:%i:%s')),
-                        if(concat(ipt.regdate,' ',ipt.regtime) is null 
-                            or trim(concat(ipt.regdate,' ',ipt.regtime)) = '' 
+                        if(concat(ipt.regdate,' ',ipt.regtime) is null
+                            or trim(concat(ipt.regdate,' ',ipt.regtime)) = ''
                             or concat(ipt.regdate,' ',ipt.regtime) like '0000-00-00%',
                             '',date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s'))
                 ) as d_update
-            from 
+            from
                 ipt_nurse_oper i
                 left join an_stat a on a.an=i.an
                 left join ipt  on ipt.an=a.an
                 left join patient pt on pt.hn = ipt.hn
                 left join person p on p.patient_hn = ipt.hn
-                left join spclty on spclty.spclty=ipt.spclty  
-                left join ipt_oper_code ipc on ipc.ipt_oper_code=i.ipt_oper_code 
-            where 
+                left join spclty on spclty.spclty=ipt.spclty
+                left join ipt_oper_code ipc on ipc.ipt_oper_code=i.ipt_oper_code
+            where
                 ipt.an = ?
 
             union all
@@ -875,8 +885,8 @@ class HisHosxpv4Model {
                 pt.hn as pid,
                 ipt.an,
                 if(
-                    concat(ipt.regdate,' ',ipt.regtime) is null 
-                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = '' 
+                    concat(ipt.regdate,' ',ipt.regtime) is null
+                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = ''
                         or concat(ipt.regdate,' ',ipt.regtime) like '0000-00-00%',
                     '',
                     date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s')
@@ -894,26 +904,26 @@ class HisHosxpv4Model {
                 if(i.iprice , replace(format(i.iprice,2),',',''), format(0,2)) as serviceprice,
                 i.doctor as provider,
                 if(
-                    ipt.dchdate is not null 
+                    ipt.dchdate is not null
                         or ipt.dchdate <> '',
-                        if(concat(ipt.dchdate,' ',ipt.dchtime) is null 
-                            or trim(concat(ipt.dchdate,' ',ipt.dchtime)) = '' 
+                        if(concat(ipt.dchdate,' ',ipt.dchtime) is null
+                            or trim(concat(ipt.dchdate,' ',ipt.dchtime)) = ''
                             or concat(ipt.dchdate,' ',ipt.dchtime)like '0000-00-00%',
                         '',date_format(concat(ipt.dchdate,' ',ipt.dchtime),'%Y-%m-%d %H:%i:%s')),
-                        if(concat(ipt.regdate,' ',ipt.regtime) is null 
-                            or trim(concat(ipt.regdate,' ',ipt.regtime)) = '' 
+                        if(concat(ipt.regdate,' ',ipt.regtime) is null
+                            or trim(concat(ipt.regdate,' ',ipt.regtime)) = ''
                             or concat(ipt.regdate,' ',ipt.regtime) like '0000-00-00%',
                         '',date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s'))
                 ) as d_update
-            from 
+            from
                 iptoprt i
                 left join an_stat a on a.an=i.an
                 left join ipt  on ipt.an=a.an
                 left join patient pt on pt.hn = ipt.hn
                 left join person p on p.patient_hn = ipt.hn
-                left join spclty on spclty.spclty=ipt.spclty  
-            where              
-                ipt.an= ?                  
+                left join spclty on spclty.spclty=ipt.spclty
+            where
+                ipt.an= ?
             `;
         const result = await db.raw(sql, [hisHospcode, an]);
         return result[0];
@@ -925,8 +935,8 @@ class HisHosxpv4Model {
                 pt.hn as pid,
                 o.an as an,
                 if(
-                    concat(ipt.regdate,' ',ipt.regtime) is null 
-                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = '' 
+                    concat(ipt.regdate,' ',ipt.regtime) is null
+                        or trim(concat(ipt.regdate,' ',ipt.regtime)) = ''
                         or concat(ipt.regdate,' ',ipt.regtime)like '0000-00-00%',
                     '',
                     date_format(concat(ipt.regdate,' ',ipt.regtime),'%Y-%m-%d %H:%i:%s')
@@ -940,33 +950,33 @@ class HisHosxpv4Model {
                 format(o.sum_price,2) as price,
                 '0.00' as payprice,
                 if(
-                    concat(o.rxdate,' ',o.rxtime) is null 
-                        or trim(concat(o.rxdate,' ',o.rxtime)) = '' 
+                    concat(o.rxdate,' ',o.rxtime) is null
+                        or trim(concat(o.rxdate,' ',o.rxtime)) = ''
                         or concat(o.rxdate,' ',o.rxtime) like '0000-00-00%',
                     '',
                     date_format(concat(o.rxdate,' ',o.rxtime),'%Y-%m-%d %H:%i:%s')
                 ) as d_update
 
-            from 
-                opitemrece o  
-                left join ipt on o.hn=ipt.hn and o.an=ipt.an 
+            from
+                opitemrece o
+                left join ipt on o.hn=ipt.hn and o.an=ipt.an
                 left join person p on o.hn=p.patient_hn
                 left join spclty sp on sp.spclty=ipt.spclty
                 left join provis_instype psi on psi.code = ipt.pttype
                 left join patient pt on pt.hn = ipt.hn
                 left join drugitems_charge_list d on d.icode = o.icode
 
-            where 
-                (o.an <> ''or o.an is not null) 
+            where
+                (o.an <> ''or o.an is not null)
                 and o.unitprice <> '0'
-                and ipt.an= ?                  
+                and ipt.an= ?
             `;
         const result = await db.raw(sql, [hisHospcode, an]);
         return result[0];
     }
     async getDrugIpd(db, an, hospCode = hisHospcode) {
         const sql = `
-            select 
+            select
                 ? as HOSPCODE
                 ,ifnull(p.person_id,'') PID
                 ,ifnull(i.an,'') AN
@@ -992,21 +1002,21 @@ class HisHosxpv4Model {
                 left join person p on p.patient_hn=pt.hn
                 left join spclty s on s.spclty=i.spclty
                 left join drugitems d on d.icode=o.icode
-                left join medplan_ipd m on m.an=o.an and m.icode=o.icode                    
-            where                 
-                i.an=?       
+                left join medplan_ipd m on m.an=o.an and m.icode=o.icode
+            where
+                i.an=?
                 and d.icode is not null
                 and o.qty<>0
                 and o.sum_price>0
             group by i.an,o.icode,typedrug
-            order by i.an,typedrug,o.icode      
+            order by i.an,typedrug,o.icode
             `;
         const result = await db.raw(sql, [hisHospcode, an]);
         return result[0];
     }
     async getAccident(db, visitNo, hospCode = hisHospcode) {
         const sql = `
-            select 
+            select
                 ? as hospcode,
                 p.hn, p.hn as pid, p.cid,
                 q.seq_id, q.vn as seq,
@@ -1039,8 +1049,8 @@ class HisHosxpv4Model {
             LEFT JOIN person p ON p.patient_hn = pt.hn
             LEFT JOIN er_nursing_detail d ON er.vn = d.vn
             LEFT JOIN er_nursing_visit_type vt ON vt.visit_type = d.visit_type
-            LEFT JOIN accident_transport_type tt ON tt.accident_transport_type_id = d.accident_transport_type_id                   
-            where                 
+            LEFT JOIN accident_transport_type tt ON tt.accident_transport_type_id = d.accident_transport_type_id
+            where
                 q.vn =?
             `;
         const result = await db.raw(sql, [hisHospcode, visitNo]);
@@ -1053,18 +1063,18 @@ class HisHosxpv4Model {
             .leftJoin('person', 'oe.hn', 'person.patient_hn')
             .select(db.raw('? as HOSPCODE', [hisHospcode]))
             .select('patient.hn as PID', 'patient.cid as CID', 'di.std_code as DRUGALLERGY', 'oe.agent as DNAME', 'oe.seriousness_id as ALEVE', 'oe.symptom as DETAIL', 'oe.opd_allergy_source_id as INFORMANT')
-            .select(db.raw(`if(oe.report_date is null 
-                    or trim(oe.report_date)=' ' 
+            .select(db.raw(`if(oe.report_date is null
+                    or trim(oe.report_date)=' '
                     or oe.report_date like '0000-00-00%',
                     '', date_format(oe.report_date,'%Y-%m-%d')) as DATERECORD`))
             .select(db.raw('? as INFORMHOSP', [hisHospcode]))
-            .select(db.raw(`(select case when 
-                    oe.allergy_relation_id in ('1','2','3','4','5') 
+            .select(db.raw(`(select case when
+                    oe.allergy_relation_id in ('1','2','3','4','5')
                 then  oe.allergy_relation_id
                 else  '1'  end) as TYPEDX`))
             .select(db.raw(`'' as SYMPTOM`))
-            .select(db.raw(`if(oe.update_datetime is null or trim(oe.update_datetime) = '' 
-                or oe.update_datetime like '0000-00-00%', '', 
+            .select(db.raw(`if(oe.update_datetime is null or trim(oe.update_datetime) = ''
+                or oe.update_datetime like '0000-00-00%', '',
                 date_format(oe.update_datetime,'%Y-%m-%d %H:%i:%s')) as D_UPDATE`))
             .where('oe.hn', hn);
     }
@@ -1092,22 +1102,22 @@ class HisHosxpv4Model {
             .leftJoin('doctor', 'o.doctor', 'doctor.code')
             .select(db.raw('? as HOSPCODE', [hisHospcode]))
             .select('ro.refer_number as REFERID', db.raw('concat(?,ro.refer_number) as REFERID_PROVINCE', [hisHospcode]), 'pt.hn as PID', 'pt.cid', 'os.seq_id', 'os.vn as SEQ', 'o.an as AN')
-            .select('o.i_refer_number as REFERID_ORIGIN', 'o.rfrilct as HOSPCODE_ORIGIN', db.raw(`if(concat(o.vstdate,' ', o.vsttime) is null 
-                or trim(concat(o.vstdate,' ', o.vsttime)) = '' 
+            .select('o.i_refer_number as REFERID_ORIGIN', 'o.rfrilct as HOSPCODE_ORIGIN', db.raw(`if(concat(o.vstdate,' ', o.vsttime) is null
+                or trim(concat(o.vstdate,' ', o.vsttime)) = ''
                 or concat(o.vstdate,' ', o.vsttime) like '0000-00-00%',
-                '', date_format(concat(o.vstdate,' ', o.vsttime),'%Y-%m-%d %H:%i:%s')) as DATETIME_SERV`), db.raw(`if(concat(i.regdate,' ', i.regtime) is null 
-                        or trim(concat(i.regdate,' ', i.regtime)) = '' 
+                '', date_format(concat(o.vstdate,' ', o.vsttime),'%Y-%m-%d %H:%i:%s')) as DATETIME_SERV`), db.raw(`if(concat(i.regdate,' ', i.regtime) is null
+                        or trim(concat(i.regdate,' ', i.regtime)) = ''
                         or concat(i.regdate,' ', i.regtime) like '0000-00-00%','',
                     date_format(concat(i.regdate,' ', i.regtime),'%Y-%m-%d %H:%i:%s')
                 ) as DATETIME_ADMIT`), db.raw(`if(
-                    concat(ro.refer_date, ' ', ro.refer_time) is null 
-                        or trim(concat(ro.refer_date, ' ', ro.refer_time)) = '' 
+                    concat(ro.refer_date, ' ', ro.refer_time) is null
+                        or trim(concat(ro.refer_date, ' ', ro.refer_time)) = ''
                         or concat(ro.refer_date, ' ', ro.refer_time) like '0000-00-00%',
                     '',
                     date_format(concat(ro.refer_date, ' ', ro.refer_time),'%Y-%m-%d %H:%i:%s')
                 ) as DATETIME_REFER,
                 if (
-                    sp.provis_code is null 
+                    sp.provis_code is null
                         or sp.provis_code = '',
                     '00100',
                     sp.provis_code
@@ -1119,17 +1129,17 @@ class HisHosxpv4Model {
                 ifnull(ro.pre_diagnosis,'ไม่ระบุ') as DIAGLAST,
                 ifnull(ro.ptstatus_text,'ไม่ระบุ') as PSTATUS,
                 ovst.doctor as dr, doctor.licenseno as provider,
-                (select case e.er_pt_type 
-                    when '2' then '2' 
-                    when '1' then '3' 
-                else 
-                    '1' 
+                (select case e.er_pt_type
+                    when '2' then '2'
+                    when '1' then '3'
+                else
+                    '1'
                 end
                 ) as PTYPE,
                 ifnull(e.er_emergency_level_id,'5') as EMERGENCY,
                 '99' as PTYPEDIS,
                 if(
-                    ro.refer_cause = '1' 
+                    ro.refer_cause = '1'
                         or ro.refer_cause = '2' ,
                     ro.refer_cause,
                     '1'
@@ -1137,8 +1147,8 @@ class HisHosxpv4Model {
                 ro.request_text as REQUEST,
                 ro.doctor as PROVIDER,
                 if(
-                    concat(o.vstdate, ' ', o.vsttime) is null 
-                        or trim(concat(o.vstdate, ' ', o.vsttime)) = '' 
+                    concat(o.vstdate, ' ', o.vsttime) is null
+                        or trim(concat(o.vstdate, ' ', o.vsttime)) = ''
                         or concat(o.vstdate, ' ', o.vsttime) like '0000-00-00%',
                     '',
                     date_format(concat(o.vstdate, ' ', o.vsttime),'%Y-%m-%d %H:%i:%s')
@@ -1161,22 +1171,22 @@ class HisHosxpv4Model {
     }
     async getCareRefer(db, referNo, hospCode = hisHospcode) {
         const sql = `
-            select 
+            select
                 '${hisHospcode}' as hospcode,
                 ro.refer_number as referid,
                 concat('${hisHospcode}',ro.refer_number ) as referid_province,
                 '' as caretype,
                 if(
-                    concat(ro.refer_date, ' ', ro.refer_time) is null 
-                        or trim(concat(ro.refer_date, ' ', ro.refer_time)) = '' 
+                    concat(ro.refer_date, ' ', ro.refer_time) is null
+                        or trim(concat(ro.refer_date, ' ', ro.refer_time)) = ''
                         or concat(ro.refer_date, ' ', ro.refer_time) like '0000-00-00%',
                     '',
                     date_format(concat(ro.refer_date, ' ', ro.refer_time),'%Y-%m-%d %H:%i:%s')
-                ) as d_update 
-                
+                ) as d_update
+
             from
-                referout ro 
-            where 
+                referout ro
+            where
                 ro.refer_number = ?
             `;
         const result = await db.raw(sql, [referNo]);
@@ -1205,7 +1215,7 @@ class HisHosxpv4Model {
         columnName = columnName === 'licenseNo' ? 'd.code' : columnName;
         columnName = columnName === 'cid' ? 'd.cid' : columnName;
         const sql = `
-            select 
+            select
                 '${hisHospcode}' as hospcode,
                 d.code as provider,
                 d.licenseno as registerno,
@@ -1214,7 +1224,7 @@ class HisHosxpv4Model {
                 ifnull(p2.provis_pname_long_name,d.pname) as prename,
                 ifnull(p.fname,d.fname) as name,
                 ifnull(p.lname,d.lname) as lname,
-                d.sex as sex,	
+                d.sex as sex,
                 if(p.birthday   is null or trim(p.birthday )='' or p.birthday   like '0000-00-00%','',date_format(p.birthday,'%Y-%m-%d')) as  birth,
                 d.provider_type_code as providertype,
                 if( d.start_date is null or trim(d.start_date)='' or d.start_date like '0000-00-00%','',date_format(d.start_date,'%Y-%m-%d')) as startdate,
@@ -1222,13 +1232,13 @@ class HisHosxpv4Model {
                 d.move_from_hospcode as movefrom,
                 d.move_to_hospcode as  moveto,
                 if(d.update_datetime is null or trim(d.update_datetime)='' or d.update_datetime like '0000-00-00%','',date_format(d.update_datetime,'%Y-%m-%d %H:%i:%s') ) as d_update
-                
-            from 
-                doctor d 
+
+            from
+                doctor d
                 left join patient p on d.cid = p.cid
                 left join pname pn on pn.name = p.pname
-                left join provis_pname p2 on p2.provis_pname_code = pn.provis_code                
-            where 
+                left join provis_pname p2 on p2.provis_pname_code = pn.provis_code
+            where
                 ${columnName} = ?`;
         const result = await db.raw(sql, [searchNo]);
         return result[0];
@@ -1247,7 +1257,7 @@ class HisHosxpv4Model {
                 CASE WHEN p2.provis_pname_long_name IS NULL THEN d.pname ELSE p2.provis_pname_long_name END as prename,
                 CASE WHEN p.fname IS NULL THEN d.fname ELSE p.fname END as name,
                 CASE WHEN p.lname IS NULL THEN d.lname ELSE p.lname END as lname,
-                d.sex as sex,	
+                d.sex as sex,
                 if(p.birthday is null or trim(p.birthday )='' or p.birthday   like '0000-00-00%','',date_format(p.birthday,'%Y-%m-%d')) as  birth,
                 d.provider_type_code as providertype,
                 if( d.start_date is null or trim(d.start_date)='' or d.start_date like '0000-00-00%','',date_format(d.start_date,'%Y-%m-%d')) as startdate,
@@ -1301,7 +1311,7 @@ class HisHosxpv4Model {
             .leftJoin('bedtype', 'bedno.bedtype', 'bedtype.bedtype')
             .leftJoin('bed_status_type as status', 'bedno.bed_status_type_id', 'status.bed_status_type_id')
             .select('bedno.bedno', 'bedno.bedtype', 'bedtype.name as bedtype_name', 'bedno.roomno', 'roomno.ward as wardcode', 'ward.name as wardname', 'bedno.export_code as std_code', 'bedno.bed_status_type_id', 'status.bed_status_type_name', db.raw("CASE WHEN ward.ward_active !='Y' OR status.is_available !='Y' THEN 0 ELSE 1 END as isactive"), db.raw(`
-                    CASE 
+                    CASE
                         WHEN LOWER(bedtype.name) LIKE '%พิเศษ%' THEN 'S'
                         WHEN LOWER(bedtype.name) LIKE '%icu%' OR bedtype.name LIKE '%ไอซียู%' THEN 'ICU'
                         WHEN LOWER(bedtype.name) LIKE '%ห้องคลอด%' OR LOWER(bedtype.name) LIKE '%รอคลอด%' THEN 'LR'

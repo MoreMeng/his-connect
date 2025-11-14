@@ -144,10 +144,16 @@ export class HisHosxpv4Model {
     }
 
     async getPerson(db: Knex, columnName, searchText, hospCode = hisHospcode) {
-        columnName = columnName == 'hn' ? 'p.hn' : columnName;
-        columnName = columnName == 'cid' ? 'p.cid' : columnName;
-        columnName = columnName == 'name' ? 'p.fname' : columnName;
-        columnName = columnName == 'hid' ? 'h.house_id' : columnName;
+        const mappedColumn =
+            columnName == 'hn' ? 'p.hn' :
+            columnName == 'cid' ? 'p.cid' :
+            columnName == 'name' ? 'p.fname' :
+            columnName == 'hid' ? 'h.house_id' :
+            columnName;
+        const normalizedSearchText =
+            columnName == 'hn' && typeof searchText !== 'string'
+                ? String(searchText)
+                : searchText;
 
         // Subquery for VSTATUS
         const vstatusSubquery = db('person_village_duty as pvd')
@@ -159,10 +165,10 @@ export class HisHosxpv4Model {
                 WHEN pvd.person_duty_id IN ('7','8','9') THEN '5'
                 ELSE '5'
             END`))
-            .whereRaw('pvd.person_id = p.cid')
+            .whereRaw('pvd.person_id::text = p.cid')
             .limit(1);
 
-        const result = await db('patient as p')
+        const query = db('patient as p')
             .leftJoin('person', 'p.hn', 'person.patient_hn')
             .leftJoin('house as h', 'person.house_id', 'h.house_id')
             .leftJoin('occupation as o', 'o.occupation', 'p.occupation')
@@ -182,7 +188,7 @@ export class HisHosxpv4Model {
                 db.raw('p.hn as PID'),
                 db.raw('p.sex as SEX'),
                 db.raw('p.birthday as BIRTH'),
-                db.raw("CASE WHEN p.marrystatus IN (1,2,3,4,5,6) THEN p.marrystatus ELSE '9' END as MSTATUS"),
+                db.raw("CASE WHEN p.marrystatus IN ('1','2','3','4','5','6') THEN p.marrystatus ELSE '9' END as MSTATUS"),
                 db.raw("CASE WHEN person.person_house_position_id = 1 THEN '1' ELSE '2' END as FSTATUS"),
                 db.raw("CASE WHEN o.occupation IS NULL THEN '000' ELSE o.occupation END AS OCCUPATION_OLD"),
                 db.raw("CASE WHEN o.nhso_code IS NULL THEN '9999' ELSE o.nhso_code END AS OCCUPATION_NEW"),
@@ -197,13 +203,7 @@ export class HisHosxpv4Model {
                 db.raw('person.movein_date as MOVEIN'),
                 db.raw("CASE WHEN person.person_discharge_id IS NULL THEN '9' ELSE person.person_discharge_id END AS DISCHARGE"),
                 db.raw('person.discharge_date as DDISCHARGE'),
-                db.raw(`CASE
-                    WHEN person.blood_grp_id = 1 THEN '1'
-                    WHEN person.blood_grp_id = 2 THEN '2'
-                    WHEN person.blood_grp_id = 3 THEN '3'
-                    WHEN person.blood_grp_id = 4 THEN '4'
-                    ELSE '9'
-                END as ABOGROUP`),
+                db.raw(`person.blood_group AS ABOGROUP`),
                 db.raw('person.blood_grp_rh as RHGROUP'),
                 db.raw('pl.nhso_code as LABOR'),
                 db.raw('p.passport_no as PASSPORT'),
@@ -212,8 +212,13 @@ export class HisHosxpv4Model {
                 db.raw('p.deathday as dead'),
                 db.raw('CASE WHEN p.last_update IS NULL THEN p.last_update ELSE p.last_visit END as D_UPDATE')
             )
-            .where(columnName, searchText);
+        if (columnName === 'hn') {
+            query.whereRaw('p.hn::text = ?::text', [searchText]);
+        } else {
+            query.where(mappedColumn, normalizedSearchText);
+        }
 
+        const result = await query;
         return result[0];
     }
 
@@ -1776,7 +1781,7 @@ export class HisHosxpv4Model {
             .select('bedno.bedno', 'bedno.bedtype', 'bedtype.name as bedtype_name', 'bedno.roomno',
                 'roomno.ward as wardcode', 'ward.name as wardname', 'bedno.export_code as std_code',
                 'bedno.bed_status_type_id', 'status.bed_status_type_name',
-                db.raw("CASE WHEN ward.ward_active !='Y' OR status.is_available !='Y' THEN 0 ELSE 1 END as isactive"),
+                db.raw("CASE WHEN ward.ward_active !=\'Y\' OR status.is_available !=\'Y\' THEN 0 ELSE 1 END as isactive"),
                 db.raw(`
                     CASE
                         WHEN LOWER(bedtype.name) LIKE '%พิเศษ%' THEN 'S'
