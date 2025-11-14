@@ -204,7 +204,7 @@ export class HisHosxpv4Model {
                 db.raw("CASE WHEN person.person_discharge_id IS NULL THEN '9' ELSE person.person_discharge_id END AS DISCHARGE"),
                 db.raw('person.discharge_date as DDISCHARGE'),
                 db.raw(`person.blood_group AS ABOGROUP`),
-                db.raw('person.blood_grp_rh as RHGROUP'),
+                db.raw('person.bloodgroup_rh as RHGROUP'),
                 db.raw('pl.nhso_code as LABOR'),
                 db.raw('p.passport_no as PASSPORT'),
                 db.raw('p.type_area as TYPEAREA'),
